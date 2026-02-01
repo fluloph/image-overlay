@@ -606,6 +606,53 @@ subscribe(() => {
 
 // --- INITIALIZATION & STATIC LISTENERS ---
 
+// Toggles visibility of a section and updates arrow direction
+// Toggles visibility of a section and updates arrow direction
+function toggleSection(elementId, arrowId) {
+    const el = document.getElementById(elementId);
+    const arrow = document.getElementById(arrowId);
+    if (el && arrow) {
+        // Check both class and computed style to be safe
+        const isHidden = el.classList.contains('hidden') || window.getComputedStyle(el).display === 'none';
+
+        if (isHidden) {
+            el.classList.remove('hidden');
+            el.style.display = ''; // Remove inline style to revert to CSS default (block/flex)
+            arrow.textContent = '▼'; // Down Arrow
+        } else {
+            el.classList.add('hidden');
+            el.style.display = 'none'; // Force inline hide
+            arrow.textContent = '▶'; // Right Arrow
+        }
+    }
+}
+window.toggleSection = toggleSection;
+
+function setupCollapsibles() {
+    const sections = [
+        { headerId: 'header-bg', listId: 'bg-list', arrowId: 'bg-arrow' },
+        { headerId: 'header-text', listId: 'text-list', arrowId: 'text-arrow' },
+        { headerId: 'header-overlays', listId: 'overlays-list', arrowId: 'overlay-arrow' }
+    ];
+
+    sections.forEach(({ headerId, listId, arrowId }) => {
+        const header = document.getElementById(headerId);
+        if (header) {
+            header.addEventListener('click', (e) => {
+                // Ignore clicks on buttons inside the header (handled by stopPropagation inline, but good to be safe)
+                if (e.target.tagName === 'BUTTON') return;
+                toggleSection(listId, arrowId);
+            });
+        }
+    });
+}
+
+// Initialize Collapsibles
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("Setting up collapsibles...");
+    setupCollapsibles();
+});
+
 // Background Add Button
 document.getElementById('add-bg-btn').addEventListener('click', () => {
     addBackground();

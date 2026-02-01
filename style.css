@@ -385,3 +385,30 @@ canvas {
     font-size: 1.2rem;
     pointer-events: none;
 }
+
+/* Utility Classes */
+.hidden {
+    display: none !important;
+}
+
+.clickable {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+    border-radius: 4px;
+    padding: 4px;
+    margin: -4px; /* Offset padding */
+}
+
+.clickable:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.arrow {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    transition: transform 0.2s;
+    display: inline-block;
+    width: 16px;
+    text-align: center;
+}
