@@ -35,52 +35,16 @@
                     </div>
                 </section>
 
-                <!-- 2. Text Layer -->
+                <!-- 2. Text Layers -->
                 <section class="control-group">
                     <div class="group-header">
-                        <h2>2. Text Overlay</h2>
-                    </div>
-                    <div id="text-controls-wrapper">
-                        <div class="controls" id="text-controls">
-                            <textarea id="text-content" placeholder="Enter your text here...
-(Supports multiple lines)"></textarea>
-
-                            <div class="row">
-                                <label>
-                                    <span>Font Size (px)</span>
-                                    <input type="number" id="text-size" value="40" min="10">
-                                </label>
-                                <label>
-                                    <span>Color</span>
-                                    <input type="color" id="text-color" value="#ffffff">
-                                </label>
-                            </div>
-
-                            <div class="row">
-                                <label>
-                                    <span>Background Opacity</span>
-                                    <span id="text-bg-opacity-val" class="val-display">0%</span>
-                                    <input type="range" id="text-bg-opacity" min="0" max="100" value="0">
-                                </label>
-                                <label>
-                                    <span>Max Width (px)</span>
-                                    <input type="number" id="text-width" value="400" min="50">
-                                </label>
-                            </div>
-
-                            <div class="row">
-                                <label>
-                                    <span>Horizontal Position</span>
-                                    <span id="text-x-val" class="val-display">50%</span>
-                                    <input type="range" id="text-x" min="0" max="100" value="50">
-                                </label>
-                                <label>
-                                    <span>Vertical Position</span>
-                                    <span id="text-y-val" class="val-display">50%</span>
-                                    <input type="range" id="text-y" min="0" max="100" value="50">
-                                </label>
-                            </div>
+                        <h2>2. Text Layers</h2>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button id="add-text-btn" class="icon-btn" title="Add Text">+</button>
                         </div>
+                    </div>
+                    <div id="text-list" class="overlays-stack">
+                        <!-- Dynamic text controls will be injected here -->
                     </div>
                 </section>
 

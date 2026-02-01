@@ -17,16 +17,8 @@ const state = {
             y: 0
         }
     ],
-    textLayer: {
-        enabled: true,
-        content: "",
-        size: 40,
-        color: "#ffffff",
-        x: 50,
-        y: 50,
-        maxWidth: 400,
-        bgOpacity: 0
-    },
+    // Dynamic Array of Texts (Index 0 = Bottom)
+    texts: [],
     // Dynamic Array of Overlays
     overlays: []
     // Format: { id: timestamp, image: null, loaded: false, scale: 50, x: 50, y: 50 }
@@ -129,6 +121,54 @@ function moveBackgroundDown(id) {
     }
 }
 
+// Text Specific Actions
+function addText() {
+    state.texts.push({
+        id: Date.now(),
+        content: "New Text",
+        size: 40,
+        color: "#ffffff",
+        x: 50,
+        y: 50,
+        maxWidth: 400,
+        bgOpacity: 0
+    });
+    notify();
+}
+
+function removeText(id) {
+    state.texts = state.texts.filter(t => t.id !== id);
+    notify();
+}
+
+function updateText(id, prop, value) {
+    const text = state.texts.find(t => t.id === id);
+    if (text) {
+        text[prop] = value;
+        notify();
+    }
+}
+
+function moveTextUp(id) {
+    const idx = state.texts.findIndex(t => t.id === id);
+    if (idx < state.texts.length - 1) {
+        const temp = state.texts[idx];
+        state.texts[idx] = state.texts[idx + 1];
+        state.texts[idx + 1] = temp;
+        notify();
+    }
+}
+
+function moveTextDown(id) {
+    const idx = state.texts.findIndex(t => t.id === id);
+    if (idx > 0) {
+        const temp = state.texts[idx];
+        state.texts[idx] = state.texts[idx - 1];
+        state.texts[idx - 1] = temp;
+        notify();
+    }
+}
+
 
 // --- 2. CANVAS ENGINE ---
 
@@ -173,14 +213,14 @@ function drawCanvas(canvas) {
         }
     });
 
-    // 4. Draw Text Layer
-    if (state.textLayer.enabled && state.textLayer.content) {
-        drawText(ctx, canvas.width, canvas.height);
-    }
+    // 4. Draw Text Layers
+    state.texts.forEach(textItem => {
+        drawText(ctx, textItem, canvas.width, canvas.height);
+    });
 }
 
-function drawText(ctx, canvasW, canvasH) {
-    const { content, size, color, x, y, maxWidth, bgOpacity } = state.textLayer;
+function drawText(ctx, textItem, canvasW, canvasH) {
+    const { content, size, color, x, y, maxWidth, bgOpacity } = textItem;
 
     ctx.font = `${size}px 'Outfit', sans-serif`;
     ctx.textBaseline = 'top';
@@ -276,6 +316,7 @@ const canvas = document.getElementById('main-canvas');
 const placeholderStatus = document.getElementById('placeholder-msg');
 const overlaysList = document.getElementById('overlays-list');
 const bgList = document.getElementById('bg-list');
+const textList = document.getElementById('text-list');
 
 // Main Render Loop
 function renderApp() {
@@ -294,15 +335,20 @@ function renderApp() {
 }
 
 // Global variable to track rendered IDs for diffing UI updates
-let renderedIDs = [];
+let renderedOverlayIDs = [];
+let renderedBackgroundIDs = [];
+let renderedTextIDs = [];
 
-function checkIDsMatch() {
-    const newIDs = state.overlays.map(o => o.id);
-    if (JSON.stringify(newIDs) !== JSON.stringify(renderedIDs)) {
-        renderedIDs = newIDs;
-        return false;
+function getIDs(list) {
+    return JSON.stringify(list.map(i => i.id));
+}
+
+function checkIDsMatch(rendered, current) {
+    const currentStr = getIDs(current);
+    if (currentStr !== rendered) {
+        return { match: false, newIDs: currentStr };
     }
-    return true;
+    return { match: true };
 }
 
 // Expose to window for inline events
@@ -312,6 +358,11 @@ window.removeBackground = removeBackground;
 window.updateBackground = updateBackground;
 window.moveBackgroundUp = moveBackgroundUp;
 window.moveBackgroundDown = moveBackgroundDown;
+
+window.removeText = removeText;
+window.updateText = updateText;
+window.moveTextUp = moveTextUp;
+window.moveTextDown = moveTextDown;
 
 window.uploadOverlayImage = function (input, id) {
     handleFileUpload(input, id, 'overlay');
@@ -364,7 +415,10 @@ function handleFileUpload(input, id, type) {
 
 // Render Overlay Controls
 function renderOverlayControls() {
-    // Diffing optimization skipped for simplicity
+    const check = checkIDsMatch(renderedOverlayIDs, state.overlays);
+    if (check.match) return; // Skip DOM update if IDs match
+    renderedOverlayIDs = check.newIDs;
+
     overlaysList.innerHTML = '';
     state.overlays.forEach((overlay, index) => {
         overlaysList.appendChild(createControlCard(overlay, index, 'overlay'));
@@ -372,9 +426,24 @@ function renderOverlayControls() {
 }
 
 function renderBackgroundControls() {
+    const check = checkIDsMatch(renderedBackgroundIDs, state.backgrounds);
+    if (check.match) return;
+    renderedBackgroundIDs = check.newIDs;
+
     bgList.innerHTML = '';
     state.backgrounds.forEach((bg, index) => {
         bgList.appendChild(createControlCard(bg, index, 'background'));
+    });
+}
+
+function renderTextControls() {
+    const check = checkIDsMatch(renderedTextIDs, state.texts);
+    if (check.match) return;
+    renderedTextIDs = check.newIDs;
+
+    textList.innerHTML = '';
+    state.texts.forEach((text, index) => {
+        textList.appendChild(createControlCard(text, index, 'text'));
     });
 }
 
@@ -388,23 +457,35 @@ function createControlCard(item, index, type) {
     el.style.padding = '12px';
 
     const isBg = type === 'background';
-    const title = isBg ? `Layer ${index + 1}` : `Image ${index + 1}`;
-    const removeFn = isBg ? `removeBackground(${item.id})` : `removeOverlay(${item.id})`;
-    const updateFn = isBg ? `updateBackground` : `updateOverlay`;
+    const isText = type === 'text';
+
+    let title = `Image ${index + 1}`;
+    if (isBg) title = `Layer ${index + 1}`;
+    if (isText) title = `Text ${index + 1}`;
+
+    let removeFn = `removeOverlay(${item.id})`;
+    if (isBg) removeFn = `removeBackground(${item.id})`;
+    if (isText) removeFn = `removeText(${item.id})`;
+
+    const updateFn = isBg ? `updateBackground` : (isText ? `updateText` : `updateOverlay`);
     const uploadFn = isBg ? `uploadBackgroundImage` : `uploadOverlayImage`;
 
-    // Reordering buttons for Backgrounds
+    // Reordering buttons for Backgrounds and Texts
     let reorderHtml = '';
-    if (isBg) {
+    if (isBg || isText) {
+        const moveDownFn = isBg ? `moveBackgroundDown(${item.id})` : `moveTextDown(${item.id})`;
+        const moveUpFn = isBg ? `moveBackgroundUp(${item.id})` : `moveTextUp(${item.id})`;
+
         reorderHtml = `
             <div style="display:flex; gap:4px; margin-right:8px;">
-                <button onclick="moveBackgroundDown(${item.id})" class="icon-btn-small" title="Move Down">↓</button>
-                <button onclick="moveBackgroundUp(${item.id})" class="icon-btn-small" title="Move Up">↑</button>
+                <button onclick="${moveDownFn}" class="icon-btn-small" title="Move Down">↓</button>
+                <button onclick="${moveUpFn}" class="icon-btn-small" title="Move Up">↑</button>
             </div>
         `;
     }
 
-    el.innerHTML = `
+    // Header Part
+    let innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <div style="display:flex; align-items:center;">
                 ${reorderHtml}
@@ -412,46 +493,104 @@ function createControlCard(item, index, type) {
             </div>
             <button onclick="${removeFn}" style="background:none; border:none; cursor:pointer; font-size:1.1rem; opacity:0.6;">✖</button>
         </div>
-        
-        ${!item.loaded ? `
-            <div class="file-input-wrapper" style="margin-bottom:10px;">
-                    <input type="file" accept="image/*" onchange="${uploadFn}(this, ${item.id})" style="width:100%">
-            </div>
-        ` : `
-            <div style="color:#4ade80; font-size:0.8rem; margin-bottom:8px;">✓ Image Loaded</div>
-        `}
-
-        <div class="${!item.loaded ? 'hidden' : ''}">
-             <div class="row" style="margin-bottom:8px">
-                <label style="display:flex; justify-content:space-between; width:100%; font-size:0.85rem;">
-                    Opacity <span class="val-display-static">${item.opacity !== undefined ? item.opacity : 100}%</span>
-                </label>
-                <input type="range" min="0" max="100" value="${item.opacity !== undefined ? item.opacity : 100}" style="width:100%"
-                        oninput="${updateFn}(${item.id}, 'opacity', parseInt(this.value)); this.previousElementSibling.querySelector('span').textContent = this.value + '%'">
-            </div>
-            <div class="row" style="margin-bottom:8px">
-                <label style="display:flex; justify-content:space-between; width:100%; font-size:0.85rem;">
-                    Scale <span class="val-display-static">${item.scale}%</span>
-                </label>
-                <input type="range" min="1" max="200" value="${item.scale}" style="width:100%"
-                        oninput="${updateFn}(${item.id}, 'scale', parseInt(this.value)); this.previousElementSibling.querySelector('span').textContent = this.value + '%'">
-            </div>
-            <div class="row" style="margin-bottom:8px">
-                <label style="display:flex; justify-content:space-between; width:100%; font-size:0.85rem;">
-                    Horizontal <span class="val-display-static">${item.x}%</span>
-                </label>
-                <input type="range" min="0" max="100" value="${item.x}" style="width:100%"
-                        oninput="${updateFn}(${item.id}, 'x', parseInt(this.value)); this.previousElementSibling.querySelector('span').textContent = this.value + '%'">
-            </div>
-            <div class="row" style="margin-bottom:0px">
-                <label style="display:flex; justify-content:space-between; width:100%; font-size:0.85rem;">
-                    Vertical <span class="val-display-static">${item.y}%</span>
-                </label>
-                <input type="range" min="0" max="100" value="${item.y}" style="width:100%"
-                        oninput="${updateFn}(${item.id}, 'y', parseInt(this.value)); this.previousElementSibling.querySelector('span').textContent = this.value + '%'">
-            </div>
-        </div>
     `;
+
+    // Content Part
+    if (isText) {
+        innerHTML += `
+            <div class="controls">
+                <textarea 
+                    oninput="updateText(${item.id}, 'content', this.value)" 
+                    placeholder="Enter your text here...">${item.content}</textarea>
+
+                <div class="row">
+                    <label>
+                        <span>Font Size (px)</span>
+                        <input type="number" value="${item.size}" min="10" 
+                               oninput="updateText(${item.id}, 'size', parseInt(this.value))">
+                    </label>
+                    <label>
+                        <span>Color</span>
+                        <input type="color" value="${item.color}" 
+                               oninput="updateText(${item.id}, 'color', this.value)">
+                    </label>
+                </div>
+
+                <div class="row">
+                    <label>
+                        <span>Background Opacity</span>
+                        <span class="val-display">${item.bgOpacity}%</span>
+                        <input type="range" min="0" max="100" value="${item.bgOpacity}"
+                               oninput="updateText(${item.id}, 'bgOpacity', parseInt(this.value)); this.previousElementSibling.textContent = this.value + '%'">
+                    </label>
+                    <label>
+                        <span>Max Width (px)</span>
+                        <input type="number" value="${item.maxWidth}" min="50"
+                               oninput="updateText(${item.id}, 'maxWidth', parseInt(this.value))">
+                    </label>
+                </div>
+
+                <div class="row">
+                    <label>
+                        <span>Horizontal Position</span>
+                        <span class="val-display">${item.x}%</span>
+                        <input type="range" min="0" max="100" value="${item.x}"
+                               oninput="updateText(${item.id}, 'x', parseInt(this.value)); this.previousElementSibling.textContent = this.value + '%'">
+                    </label>
+                    <label>
+                        <span>Vertical Position</span>
+                        <span class="val-display">${item.y}%</span>
+                        <input type="range" min="0" max="100" value="${item.y}"
+                               oninput="updateText(${item.id}, 'y', parseInt(this.value)); this.previousElementSibling.textContent = this.value + '%'">
+                    </label>
+                </div>
+            </div>
+        `;
+    } else {
+        // Image / Overlay Controls
+        innerHTML += `
+            ${!item.loaded ? `
+                <div class="file-input-wrapper" style="margin-bottom:10px;">
+                        <input type="file" accept="image/*" onchange="${uploadFn}(this, ${item.id})" style="width:100%">
+                </div>
+            ` : `
+                <div style="color:#4ade80; font-size:0.8rem; margin-bottom:8px;">✓ Image Loaded</div>
+            `}
+
+            <div class="${!item.loaded ? 'hidden' : ''}">
+                 <div class="row" style="margin-bottom:8px">
+                    <label style="display:flex; justify-content:space-between; width:100%; font-size:0.85rem;">
+                        Opacity <span class="val-display-static">${item.opacity !== undefined ? item.opacity : 100}%</span>
+                    </label>
+                    <input type="range" min="0" max="100" value="${item.opacity !== undefined ? item.opacity : 100}" style="width:100%"
+                            oninput="${updateFn}(${item.id}, 'opacity', parseInt(this.value)); this.previousElementSibling.querySelector('span').textContent = this.value + '%'">
+                </div>
+                <div class="row" style="margin-bottom:8px">
+                    <label style="display:flex; justify-content:space-between; width:100%; font-size:0.85rem;">
+                        Scale <span class="val-display-static">${item.scale}%</span>
+                    </label>
+                    <input type="range" min="1" max="200" value="${item.scale}" style="width:100%"
+                            oninput="${updateFn}(${item.id}, 'scale', parseInt(this.value)); this.previousElementSibling.querySelector('span').textContent = this.value + '%'">
+                </div>
+                <div class="row" style="margin-bottom:8px">
+                    <label style="display:flex; justify-content:space-between; width:100%; font-size:0.85rem;">
+                        Horizontal <span class="val-display-static">${item.x}%</span>
+                    </label>
+                    <input type="range" min="0" max="100" value="${item.x}" style="width:100%"
+                            oninput="${updateFn}(${item.id}, 'x', parseInt(this.value)); this.previousElementSibling.querySelector('span').textContent = this.value + '%'">
+                </div>
+                <div class="row" style="margin-bottom:0px">
+                    <label style="display:flex; justify-content:space-between; width:100%; font-size:0.85rem;">
+                        Vertical <span class="val-display-static">${item.y}%</span>
+                    </label>
+                    <input type="range" min="0" max="100" value="${item.y}" style="width:100%"
+                            oninput="${updateFn}(${item.id}, 'y', parseInt(this.value)); this.previousElementSibling.querySelector('span').textContent = this.value + '%'">
+                </div>
+            </div>
+        `;
+    }
+
+    el.innerHTML = innerHTML;
     return el;
 }
 
@@ -459,8 +598,9 @@ function createControlCard(item, index, type) {
 // Subscriptions
 subscribe(() => {
     renderApp();
-    renderOverlayControls(); // Note: checkIDsMatch optimization was removed for simplicity during refactor, can re-add if perf slows
+    renderOverlayControls();
     renderBackgroundControls();
+    renderTextControls();
 });
 
 
@@ -472,23 +612,10 @@ document.getElementById('add-bg-btn').addEventListener('click', () => {
 });
 
 // Text Listeners
-// Toggle listener removed as text is now always enabled
-document.getElementById('text-content').addEventListener('input', (e) => updateState('textLayer.content', e.target.value));
-document.getElementById('text-size').addEventListener('input', (e) => updateState('textLayer.size', parseInt(e.target.value)));
-document.getElementById('text-color').addEventListener('input', (e) => updateState('textLayer.color', e.target.value));
-document.getElementById('text-width').addEventListener('input', (e) => updateState('textLayer.maxWidth', parseInt(e.target.value)));
-document.getElementById('text-bg-opacity').addEventListener('input', (e) => {
-    updateState('textLayer.bgOpacity', parseInt(e.target.value));
-    document.getElementById('text-bg-opacity-val').innerText = e.target.value + '%';
+document.getElementById('add-text-btn').addEventListener('click', () => {
+    addText();
 });
-document.getElementById('text-x').addEventListener('input', (e) => {
-    updateState('textLayer.x', parseInt(e.target.value));
-    document.getElementById('text-x-val').innerText = e.target.value + '%';
-});
-document.getElementById('text-y').addEventListener('input', (e) => {
-    updateState('textLayer.y', parseInt(e.target.value));
-    document.getElementById('text-y-val').innerText = e.target.value + '%';
-});
+// Legacy text listeners removed as text layer is now dynamic list
 
 
 // Add Overlay Button
