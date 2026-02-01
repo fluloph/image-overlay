@@ -628,6 +628,16 @@ function toggleSection(elementId, arrowId) {
 }
 window.toggleSection = toggleSection;
 
+function expandSection(elementId, arrowId) {
+    const el = document.getElementById(elementId);
+    const arrow = document.getElementById(arrowId);
+    if (el && arrow) {
+        el.classList.remove('hidden');
+        el.style.display = '';
+        arrow.textContent = '▼';
+    }
+}
+
 function setupCollapsibles() {
     const sections = [
         { headerId: 'header-bg', listId: 'bg-list', arrowId: 'bg-arrow' },
@@ -644,6 +654,17 @@ function setupCollapsibles() {
                 toggleSection(listId, arrowId);
             });
         }
+    });
+
+    // Auto-expand on Add Button Click
+    document.getElementById('add-bg-btn').addEventListener('click', () => {
+        expandSection('bg-list', 'bg-arrow');
+    });
+    document.getElementById('add-text-btn').addEventListener('click', () => {
+        expandSection('text-list', 'text-arrow');
+    });
+    document.getElementById('add-overlay-btn').addEventListener('click', () => {
+        expandSection('overlays-list', 'overlay-arrow');
     });
 }
 
