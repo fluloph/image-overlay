@@ -3,12 +3,20 @@ console.log("--- APP LOADED: V2.0 DYNAMIC OVERLAYS (No Collapsibles) ---");
 // --- 1. STATE MANAGEMENT ---
 
 const state = {
-    background: {
-        image: null,
-        loaded: false,
-        width: 0,
-        height: 0
-    },
+    // Dynamic Array of Backgrounds (Index 0 = Bottom)
+    backgrounds: [
+        {
+            id: Date.now(),
+            image: null,
+            loaded: false,
+            width: 0,
+            height: 0,
+            opacity: 100,
+            scale: 100,
+            x: 0,
+            y: 0
+        }
+    ],
     textLayer: {
         enabled: false,
         content: "",
@@ -72,6 +80,55 @@ function updateOverlay(id, prop, value) {
     }
 }
 
+// Background Specific Actions
+function addBackground() {
+    state.backgrounds.push({
+        id: Date.now(),
+        image: null,
+        loaded: false,
+        width: 0,
+        height: 0,
+        opacity: 100,
+        scale: 100,
+        x: 0,
+        y: 0
+    });
+    notify();
+}
+
+function removeBackground(id) {
+    state.backgrounds = state.backgrounds.filter(b => b.id !== id);
+    notify();
+}
+
+function updateBackground(id, prop, value) {
+    const bg = state.backgrounds.find(b => b.id === id);
+    if (bg) {
+        bg[prop] = value;
+        notify();
+    }
+}
+
+function moveBackgroundUp(id) {
+    const idx = state.backgrounds.findIndex(b => b.id === id);
+    if (idx < state.backgrounds.length - 1) {
+        const temp = state.backgrounds[idx];
+        state.backgrounds[idx] = state.backgrounds[idx + 1];
+        state.backgrounds[idx + 1] = temp;
+        notify();
+    }
+}
+
+function moveBackgroundDown(id) {
+    const idx = state.backgrounds.findIndex(b => b.id === id);
+    if (idx > 0) {
+        const temp = state.backgrounds[idx];
+        state.backgrounds[idx] = state.backgrounds[idx - 1];
+        state.backgrounds[idx - 1] = temp;
+        notify();
+    }
+}
+
 
 // --- 2. CANVAS ENGINE ---
 
@@ -79,24 +136,40 @@ function drawCanvas(canvas) {
     const ctx = canvas.getContext('2d');
 
     // 1. Setup Canvas
-    if (!state.background.loaded || !state.background.image) {
-        canvas.width = 800;
-        canvas.height = 600;
+    // 1. Setup Canvas Dimensions
+    // Find the largest natural dimensions among loaded backgrounds
+    let maxWidth = 800;
+    let maxHeight = 600;
+    const loadedBgs = state.backgrounds.filter(b => b.loaded);
+
+    if (loadedBgs.length === 0) {
+        canvas.width = maxWidth;
+        canvas.height = maxHeight;
         ctx.fillStyle = '#1e293b';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         return;
     }
 
-    canvas.width = state.background.width;
-    canvas.height = state.background.height;
+    // Determine Canvas Size based on largest loaded background
+    loadedBgs.forEach(bg => {
+        if (bg.width > maxWidth) maxWidth = bg.width;
+        if (bg.height > maxHeight) maxHeight = bg.height;
+    });
 
-    // 2. Draw Background
-    ctx.drawImage(state.background.image, 0, 0);
+    canvas.width = maxWidth;
+    canvas.height = maxHeight;
+
+    // 2. Draw Backgrounds (Bottom to Top)
+    state.backgrounds.forEach(bg => {
+        if (bg.loaded && bg.image) {
+            drawLayer(ctx, bg, canvas.width, canvas.height);
+        }
+    });
 
     // 3. Draw Dynamic Overlays (under text)
     state.overlays.forEach(overlay => {
         if (overlay.loaded && overlay.image) {
-            drawOverlay(ctx, overlay, canvas.width, canvas.height);
+            drawLayer(ctx, overlay, canvas.width, canvas.height); // Reuse drawLayer
         }
     });
 
@@ -170,18 +243,30 @@ function drawText(ctx, canvasW, canvasH) {
     });
 }
 
-function drawOverlay(ctx, layer, canvasW, canvasH) {
-    const { image, scale, x, y } = layer;
+function drawLayer(ctx, layer, canvasW, canvasH) {
+    const { image, scale, x, y, opacity } = layer;
+
+    // Default opacity to 100 if undefined (legacy safety)
+    const op = opacity !== undefined ? opacity : 100;
+
     const w = image.naturalWidth * (scale / 100);
     const h = image.naturalHeight * (scale / 100);
+
+    // For backgrounds (which default to 0,0) and overlays (50,50), the positioning logic
+    // depends on where x,y are relative to.
+    // In original code: posX = (x/100)*canvasW. And drawn centered at that pos.
 
     const posX = (x / 100) * canvasW;
     const posY = (y / 100) * canvasH;
 
+    // Center the image at the position
     const drawX = posX - (w / 2);
     const drawY = posY - (h / 2);
 
+    ctx.save();
+    ctx.globalAlpha = op / 100;
     ctx.drawImage(image, drawX, drawY, w, h);
+    ctx.restore();
 }
 
 
@@ -190,13 +275,16 @@ function drawOverlay(ctx, layer, canvasW, canvasH) {
 const canvas = document.getElementById('main-canvas');
 const placeholderStatus = document.getElementById('placeholder-msg');
 const overlaysList = document.getElementById('overlays-list');
+const bgList = document.getElementById('bg-list');
 
 // Main Render Loop
 function renderApp() {
     drawCanvas(canvas);
 
     // Toggle Placeholder
-    if (state.background.loaded) {
+    // Toggle Placeholder - check if ANY background is loaded
+    const hasAnyBg = state.backgrounds.some(b => b.loaded);
+    if (hasAnyBg) {
         placeholderStatus.style.display = 'none';
         canvas.style.display = 'block';
     } else {
@@ -220,118 +308,168 @@ function checkIDsMatch() {
 // Expose to window for inline events
 window.removeOverlay = removeOverlay;
 window.updateOverlay = updateOverlay;
+window.removeBackground = removeBackground;
+window.updateBackground = updateBackground;
+window.moveBackgroundUp = moveBackgroundUp;
+window.moveBackgroundDown = moveBackgroundDown;
+
 window.uploadOverlayImage = function (input, id) {
+    handleFileUpload(input, id, 'overlay');
+};
+
+window.uploadBackgroundImage = function (input, id) {
+    handleFileUpload(input, id, 'background');
+};
+
+function handleFileUpload(input, id, type) {
     if (input.files && input.files[0]) {
         const file = input.files[0];
         const img = new Image();
         const url = URL.createObjectURL(file);
         img.onload = () => {
-            const overlay = state.overlays.find(o => o.id === id);
-            if (overlay) {
-                overlay.image = img;
-                overlay.loaded = true;
-                notify();
+            if (type === 'overlay') {
+                const item = state.overlays.find(o => o.id === id);
+                if (item) {
+                    item.image = img;
+                    item.loaded = true;
+                    notify();
+                }
+            } else if (type === 'background') {
+                const item = state.backgrounds.find(b => b.id === id);
+                if (item) {
+                    item.image = img;
+                    item.width = img.naturalWidth;
+                    item.height = img.naturalHeight;
+                    item.loaded = true; // Flag as loaded
+
+                    // If this is the first load, set defaults based on size?
+                    // Currently defaults are x:0, y:0. 
+                    // Let's set defaults to Center for better UX?
+                    // Original requirement: "Backgrounds... stacked".
+                    // If we use centering logic (drawLayer), 0,0 is top-left corner.
+                    // Wait, drawLayer uses: posX = (x/100)*CW. DrawX = posX - w/2.
+                    // If x=0, posX=0. DrawX = -w/2. This centers the CENTER of image at 0,0.
+                    // This creates an image that is 1/4 visible at top-left.
+                    // FIX: For Backgrounds, we probably want default x=50, y=50 (Center).
+                    item.x = 50;
+                    item.y = 50;
+
+                    notify();
+                }
             }
         };
         img.src = url;
     }
-};
+}
 
-// Render Control Logic (Cleaned - No Collapsibles)
+// Render Overlay Controls
 function renderOverlayControls() {
-    // If IDs match, we could update values, but for simplicity in V2 we'll re-render if count changes
-    // or just let the input events handle value updates effectively. 
-    // To keep UI responsive, we rebuild if list changes.
-
-    // For sliders, we rely on the notify loop re-rendering inputs? 
-    // No, standard react-style pattern: verify if we need to destroy DOM.
-    if (checkIDsMatch()) {
-        // IDs match, just update values to avoid losing focus if we were typing?
-        // Actually, we are using oninput, so state is source of truth.
-        // We can just update value attributes if needed, but best not to kill focus.
-        // For this V2 implementation, we'll skip full re-render if IDs match.
-        return;
-    }
-
+    // Diffing optimization skipped for simplicity
     overlaysList.innerHTML = '';
-
     state.overlays.forEach((overlay, index) => {
-        const el = document.createElement('div');
-        el.className = 'overlay-control-card glass-panel';
-        // Basic non-collapsible card style
-        el.style.background = 'rgba(255, 255, 255, 0.03)';
-        el.style.border = '1px solid rgba(255, 255, 255, 0.1)';
-        el.style.borderRadius = '8px';
-        el.style.marginBottom = '12px';
-        el.style.padding = '12px';
+        overlaysList.appendChild(createControlCard(overlay, index, 'overlay'));
+    });
+}
 
-        el.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="margin:0; font-size:0.9rem; font-weight:500;">Image ${index + 1}</h3>
-                <button onclick="removeOverlay(${overlay.id})" style="background:none; border:none; cursor:pointer; font-size:1.1rem; opacity:0.6;">✖</button>
-            </div>
-            
-            ${!overlay.loaded ? `
-                <div class="file-input-wrapper" style="margin-bottom:10px;">
-                        <input type="file" accept="image/*" onchange="uploadOverlayImage(this, ${overlay.id})" style="width:100%">
-                </div>
-            ` : `
-                <div style="color:#4ade80; font-size:0.8rem; margin-bottom:8px;">✓ Image Loaded</div>
-            `}
+function renderBackgroundControls() {
+    bgList.innerHTML = '';
+    state.backgrounds.forEach((bg, index) => {
+        bgList.appendChild(createControlCard(bg, index, 'background'));
+    });
+}
 
-            <div class="${!overlay.loaded ? 'hidden' : ''}">
-                <div class="row" style="margin-bottom:8px">
-                    <label style="display:flex; justify-content:space-between; width:100%; font-size:0.85rem;">
-                        Scale <span class="val-display-static">${overlay.scale}%</span>
-                    </label>
-                    <input type="range" min="1" max="100" value="${overlay.scale}" style="width:100%"
-                            oninput="updateOverlay(${overlay.id}, 'scale', parseInt(this.value)); this.previousElementSibling.querySelector('span').textContent = this.value + '%'">
-                </div>
-                <div class="row" style="margin-bottom:8px">
-                    <label style="display:flex; justify-content:space-between; width:100%; font-size:0.85rem;">
-                        Horizontal <span class="val-display-static">${overlay.x}%</span>
-                    </label>
-                    <input type="range" min="0" max="100" value="${overlay.x}" style="width:100%"
-                            oninput="updateOverlay(${overlay.id}, 'x', parseInt(this.value)); this.previousElementSibling.querySelector('span').textContent = this.value + '%'">
-                </div>
-                <div class="row" style="margin-bottom:0px">
-                    <label style="display:flex; justify-content:space-between; width:100%; font-size:0.85rem;">
-                        Vertical <span class="val-display-static">${overlay.y}%</span>
-                    </label>
-                    <input type="range" min="0" max="100" value="${overlay.y}" style="width:100%"
-                            oninput="updateOverlay(${overlay.id}, 'y', parseInt(this.value)); this.previousElementSibling.querySelector('span').textContent = this.value + '%'">
-                </div>
+function createControlCard(item, index, type) {
+    const el = document.createElement('div');
+    el.className = 'overlay-control-card glass-panel';
+    el.style.background = 'rgba(255, 255, 255, 0.03)';
+    el.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+    el.style.borderRadius = '8px';
+    el.style.marginBottom = '12px';
+    el.style.padding = '12px';
+
+    const isBg = type === 'background';
+    const title = isBg ? `Layer ${index + 1}` : `Image ${index + 1}`;
+    const removeFn = isBg ? `removeBackground(${item.id})` : `removeOverlay(${item.id})`;
+    const updateFn = isBg ? `updateBackground` : `updateOverlay`;
+    const uploadFn = isBg ? `uploadBackgroundImage` : `uploadOverlayImage`;
+
+    // Reordering buttons for Backgrounds
+    let reorderHtml = '';
+    if (isBg) {
+        reorderHtml = `
+            <div style="display:flex; gap:4px; margin-right:8px;">
+                <button onclick="moveBackgroundDown(${item.id})" class="icon-btn-small" title="Move Down">↓</button>
+                <button onclick="moveBackgroundUp(${item.id})" class="icon-btn-small" title="Move Up">↑</button>
             </div>
         `;
-        overlaysList.appendChild(el);
-    });
+    }
+
+    el.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="display:flex; align-items:center;">
+                ${reorderHtml}
+                <h3 style="margin:0; font-size:0.9rem; font-weight:500;">${title}</h3>
+            </div>
+            <button onclick="${removeFn}" style="background:none; border:none; cursor:pointer; font-size:1.1rem; opacity:0.6;">✖</button>
+        </div>
+        
+        ${!item.loaded ? `
+            <div class="file-input-wrapper" style="margin-bottom:10px;">
+                    <input type="file" accept="image/*" onchange="${uploadFn}(this, ${item.id})" style="width:100%">
+            </div>
+        ` : `
+            <div style="color:#4ade80; font-size:0.8rem; margin-bottom:8px;">✓ Image Loaded</div>
+        `}
+
+        <div class="${!item.loaded ? 'hidden' : ''}">
+             <div class="row" style="margin-bottom:8px">
+                <label style="display:flex; justify-content:space-between; width:100%; font-size:0.85rem;">
+                    Opacity <span class="val-display-static">${item.opacity !== undefined ? item.opacity : 100}%</span>
+                </label>
+                <input type="range" min="0" max="100" value="${item.opacity !== undefined ? item.opacity : 100}" style="width:100%"
+                        oninput="${updateFn}(${item.id}, 'opacity', parseInt(this.value)); this.previousElementSibling.querySelector('span').textContent = this.value + '%'">
+            </div>
+            <div class="row" style="margin-bottom:8px">
+                <label style="display:flex; justify-content:space-between; width:100%; font-size:0.85rem;">
+                    Scale <span class="val-display-static">${item.scale}%</span>
+                </label>
+                <input type="range" min="1" max="200" value="${item.scale}" style="width:100%"
+                        oninput="${updateFn}(${item.id}, 'scale', parseInt(this.value)); this.previousElementSibling.querySelector('span').textContent = this.value + '%'">
+            </div>
+            <div class="row" style="margin-bottom:8px">
+                <label style="display:flex; justify-content:space-between; width:100%; font-size:0.85rem;">
+                    Horizontal <span class="val-display-static">${item.x}%</span>
+                </label>
+                <input type="range" min="0" max="100" value="${item.x}" style="width:100%"
+                        oninput="${updateFn}(${item.id}, 'x', parseInt(this.value)); this.previousElementSibling.querySelector('span').textContent = this.value + '%'">
+            </div>
+            <div class="row" style="margin-bottom:0px">
+                <label style="display:flex; justify-content:space-between; width:100%; font-size:0.85rem;">
+                    Vertical <span class="val-display-static">${item.y}%</span>
+                </label>
+                <input type="range" min="0" max="100" value="${item.y}" style="width:100%"
+                        oninput="${updateFn}(${item.id}, 'y', parseInt(this.value)); this.previousElementSibling.querySelector('span').textContent = this.value + '%'">
+            </div>
+        </div>
+    `;
+    return el;
 }
 
 
 // Subscriptions
 subscribe(() => {
     renderApp();
-    renderOverlayControls();
+    renderOverlayControls(); // Note: checkIDsMatch optimization was removed for simplicity during refactor, can re-add if perf slows
+    renderBackgroundControls();
 });
 
 
 // --- INITIALIZATION & STATIC LISTENERS ---
 
-// Background Drag & Drop
-function handleBgUpload(file) {
-    if (!file || !file.type.startsWith('image/')) return;
-    const img = new Image();
-    img.onload = () => {
-        state.background.image = img;
-        state.background.width = img.naturalWidth;
-        state.background.height = img.naturalHeight;
-        state.background.loaded = true;
-        notify();
-    };
-    img.src = URL.createObjectURL(file);
-}
-
-document.getElementById('bg-upload').addEventListener('change', (e) => handleBgUpload(e.target.files[0]));
+// Background Add Button
+document.getElementById('add-bg-btn').addEventListener('click', () => {
+    addBackground();
+});
 
 // Text Listeners
 document.getElementById('text-enabled').addEventListener('change', (e) => {
@@ -366,7 +504,8 @@ document.getElementById('add-overlay-btn').addEventListener('click', () => {
 
 // Download Logic
 document.getElementById('download-btn').addEventListener('click', () => {
-    if (!state.background.loaded) {
+    const hasAnyBg = state.backgrounds.some(b => b.loaded);
+    if (!hasAnyBg) {
         alert("Please upload a background image first.");
         return;
     }

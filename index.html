@@ -25,14 +25,13 @@
                 <!-- 1. Background Image -->
                 <section class="control-group">
                     <div class="group-header">
-                        <h2>1. Background Image</h2>
-                    </div>
-                    <div id="bg-content">
-                        <div class="file-drop-area" id="bg-drop-area">
-                            <span class="icon">🖼️</span>
-                            <span class="file-msg">Drag or click to upload</span>
-                            <input class="file-input" type="file" id="bg-upload" accept="image/*">
+                        <h2>1. Background Layers</h2>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button id="add-bg-btn" class="icon-btn" title="Add Background">+</button>
                         </div>
+                    </div>
+                    <div id="bg-list" class="overlays-stack">
+                        <!-- Dynamic background controls will be injected here -->
                     </div>
                 </section>
 
