@@ -18,7 +18,7 @@ const state = {
         }
     ],
     textLayer: {
-        enabled: false,
+        enabled: true,
         content: "",
         size: 40,
         color: "#ffffff",
@@ -472,12 +472,7 @@ document.getElementById('add-bg-btn').addEventListener('click', () => {
 });
 
 // Text Listeners
-document.getElementById('text-enabled').addEventListener('change', (e) => {
-    updateState('textLayer.enabled', e.target.checked);
-    const controls = document.getElementById('text-controls');
-    if (e.target.checked) controls.classList.remove('hidden');
-    else controls.classList.add('hidden');
-});
+// Toggle listener removed as text is now always enabled
 document.getElementById('text-content').addEventListener('input', (e) => updateState('textLayer.content', e.target.value));
 document.getElementById('text-size').addEventListener('input', (e) => updateState('textLayer.size', parseInt(e.target.value)));
 document.getElementById('text-color').addEventListener('input', (e) => updateState('textLayer.color', e.target.value));
