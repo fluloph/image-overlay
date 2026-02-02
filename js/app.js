@@ -1,4 +1,4 @@
-console.log("--- APP LOADED: V2.0 DYNAMIC OVERLAYS (No Collapsibles) ---");
+console.log("--- APP LOADED: V2.1 FIXED ---");
 
 // --- 1. STATE MANAGEMENT ---
 
@@ -15,14 +15,15 @@ const state = {
             scale: 100,
             x: 0,
             y: 0,
-            expanded: true
+            expanded: true,
+            filename: null
         }
     ],
     // Dynamic Array of Texts (Index 0 = Bottom)
     texts: [],
     // Dynamic Array of Overlays
     overlays: []
-    // Format: { id: timestamp, image: null, loaded: false, scale: 50, x: 50, y: 50 }
+    // Format: { id: timestamp, image: null, loaded: false, scale: 50, x: 50, y: 50, expanded: true, filename: null }
 };
 
 const listeners = [];
@@ -35,28 +36,17 @@ function notify() {
     listeners.forEach(cb => cb(state));
 }
 
-// Deep update helper
-function updateState(path, value) {
-    const parts = path.split('.');
-    let target = state;
-    for (let i = 0; i < parts.length - 1; i++) {
-        target = target[parts[i]];
-    }
-    target[parts[parts.length - 1]] = value;
-    notify();
-}
-
 // Overlay Specific Actions
 function addOverlay() {
-    const id = Date.now();
     state.overlays.push({
-        id: id,
+        id: Date.now(),
         image: null,
         loaded: false,
         scale: 50,
         x: 50,
         y: 50,
-        expanded: true
+        expanded: true,
+        filename: null
     });
     notify();
 }
@@ -86,7 +76,8 @@ function addBackground() {
         scale: 100,
         x: 0,
         y: 0,
-        expanded: true
+        expanded: true,
+        filename: null
     });
     notify();
 }
@@ -123,9 +114,6 @@ function moveBackgroundDown(id) {
         notify();
     }
 }
-
-// ... (Text actions are below this block) ...
-
 
 // Text Specific Actions
 function addText() {
@@ -196,7 +184,6 @@ function toggleLayerExpansion(id, type) {
 function drawCanvas(canvas) {
     const ctx = canvas.getContext('2d');
 
-    // 1. Setup Canvas
     // 1. Setup Canvas Dimensions
     // Find the largest natural dimensions among loaded backgrounds
     let maxWidth = 800;
@@ -230,7 +217,7 @@ function drawCanvas(canvas) {
     // 3. Draw Dynamic Overlays (under text)
     state.overlays.forEach(overlay => {
         if (overlay.loaded && overlay.image) {
-            drawLayer(ctx, overlay, canvas.width, canvas.height); // Reuse drawLayer
+            drawLayer(ctx, overlay, canvas.width, canvas.height);
         }
     });
 
@@ -313,10 +300,6 @@ function drawLayer(ctx, layer, canvasW, canvasH) {
     const w = image.naturalWidth * (scale / 100);
     const h = image.naturalHeight * (scale / 100);
 
-    // For backgrounds (which default to 0,0) and overlays (50,50), the positioning logic
-    // depends on where x,y are relative to.
-    // In original code: posX = (x/100)*canvasW. And drawn centered at that pos.
-
     const posX = (x / 100) * canvasW;
     const posY = (y / 100) * canvasH;
 
@@ -344,7 +327,6 @@ function renderApp() {
     drawCanvas(canvas);
 
     // Toggle Placeholder
-    // Toggle Placeholder - check if ANY background is loaded
     const hasAnyBg = state.backgrounds.some(b => b.loaded);
     if (hasAnyBg) {
         placeholderStatus.style.display = 'none';
@@ -353,23 +335,6 @@ function renderApp() {
         placeholderStatus.style.display = 'block';
         canvas.style.display = 'none';
     }
-}
-
-// Global variable to track rendered IDs for diffing UI updates
-let renderedOverlayIDs = [];
-let renderedBackgroundIDs = [];
-let renderedTextIDs = [];
-
-function getIDs(list) {
-    return JSON.stringify(list.map(i => i.id));
-}
-
-function checkIDsMatch(rendered, current) {
-    const currentStr = getIDs(current);
-    if (currentStr !== rendered) {
-        return { match: false, newIDs: currentStr };
-    }
-    return { match: true };
 }
 
 // Expose to window for inline events
@@ -405,6 +370,7 @@ function handleFileUpload(input, id, type) {
                 if (item) {
                     item.image = img;
                     item.loaded = true;
+                    item.filename = file.name;
                     notify();
                 }
             } else if (type === 'background') {
@@ -414,16 +380,9 @@ function handleFileUpload(input, id, type) {
                     item.width = img.naturalWidth;
                     item.height = img.naturalHeight;
                     item.loaded = true; // Flag as loaded
+                    item.filename = file.name;
 
-                    // If this is the first load, set defaults based on size?
-                    // Currently defaults are x:0, y:0. 
-                    // Let's set defaults to Center for better UX?
-                    // Original requirement: "Backgrounds... stacked".
-                    // If we use centering logic (drawLayer), 0,0 is top-left corner.
-                    // Wait, drawLayer uses: posX = (x/100)*CW. DrawX = posX - w/2.
-                    // If x=0, posX=0. DrawX = -w/2. This centers the CENTER of image at 0,0.
-                    // This creates an image that is 1/4 visible at top-left.
-                    // FIX: For Backgrounds, we probably want default x=50, y=50 (Center).
+                    // Defaults to Center for better UX
                     item.x = 50;
                     item.y = 50;
 
@@ -433,36 +392,6 @@ function handleFileUpload(input, id, type) {
         };
         img.src = url;
     }
-}
-
-// Render Overlay Controls
-function renderOverlayControls() {
-    // Optimization removed: checkIDsMatch only checked list length/order, 
-    // ignoring property updates (like loaded state).
-    renderedOverlayIDs = getIDs(state.overlays);
-
-    overlaysList.innerHTML = '';
-    state.overlays.forEach((overlay, index) => {
-        overlaysList.appendChild(createControlCard(overlay, index, 'overlay'));
-    });
-}
-
-function renderBackgroundControls() {
-    renderedBackgroundIDs = getIDs(state.backgrounds);
-
-    bgList.innerHTML = '';
-    state.backgrounds.forEach((bg, index) => {
-        bgList.appendChild(createControlCard(bg, index, 'background'));
-    });
-}
-
-function renderTextControls() {
-    renderedTextIDs = getIDs(state.texts);
-
-    textList.innerHTML = '';
-    state.texts.forEach((text, index) => {
-        textList.appendChild(createControlCard(text, index, 'text'));
-    });
 }
 
 function createControlCard(item, index, type) {
@@ -579,7 +508,7 @@ function createControlCard(item, index, type) {
                         <input type="file" accept="image/*" onchange="${uploadFn}(this, ${item.id})" style="width:100%">
                 </div>
             ` : `
-                <div style="color:#4ade80; font-size:0.8rem; margin-bottom:8px;">✓ Image Loaded</div>
+                <div style="color:#4ade80; font-size:0.8rem; margin-bottom:8px; word-break: break-all; white-space: normal;">✓ ${item.filename || 'Image Loaded'}</div>
             `}
 
             <div class="${!item.loaded ? 'hidden' : ''}">
@@ -622,6 +551,28 @@ function createControlCard(item, index, type) {
 }
 
 
+function renderOverlayControls() {
+    overlaysList.innerHTML = '';
+    state.overlays.forEach((overlay, index) => {
+        overlaysList.appendChild(createControlCard(overlay, index, 'overlay'));
+    });
+}
+
+function renderBackgroundControls() {
+    bgList.innerHTML = '';
+    state.backgrounds.forEach((bg, index) => {
+        bgList.appendChild(createControlCard(bg, index, 'background'));
+    });
+}
+
+function renderTextControls() {
+    textList.innerHTML = '';
+    state.texts.forEach((text, index) => {
+        textList.appendChild(createControlCard(text, index, 'text'));
+    });
+}
+
+
 // Subscriptions
 subscribe(() => {
     renderApp();
@@ -633,23 +584,20 @@ subscribe(() => {
 
 // --- INITIALIZATION & STATIC LISTENERS ---
 
-// Toggles visibility of a section and updates arrow direction
-// Toggles visibility of a section and updates arrow direction
 function toggleSection(elementId, arrowId) {
     const el = document.getElementById(elementId);
     const arrow = document.getElementById(arrowId);
     if (el && arrow) {
-        // Check both class and computed style to be safe
         const isHidden = el.classList.contains('hidden') || window.getComputedStyle(el).display === 'none';
 
         if (isHidden) {
             el.classList.remove('hidden');
-            el.style.display = ''; // Remove inline style to revert to CSS default (block/flex)
-            arrow.textContent = '▼'; // Down Arrow
+            el.style.display = '';
+            arrow.textContent = '▼';
         } else {
             el.classList.add('hidden');
-            el.style.display = 'none'; // Force inline hide
-            arrow.textContent = '▶'; // Right Arrow
+            el.style.display = 'none';
+            arrow.textContent = '▶';
         }
     }
 }
@@ -676,7 +624,6 @@ function setupCollapsibles() {
         const header = document.getElementById(headerId);
         if (header) {
             header.addEventListener('click', (e) => {
-                // Ignore clicks on buttons inside the header (handled by stopPropagation inline, but good to be safe)
                 if (e.target.tagName === 'BUTTON') return;
                 toggleSection(listId, arrowId);
             });
@@ -684,71 +631,84 @@ function setupCollapsibles() {
     });
 
     // Auto-expand on Add Button Click
-    document.getElementById('add-bg-btn').addEventListener('click', () => {
-        expandSection('bg-list', 'bg-arrow');
-    });
-    document.getElementById('add-text-btn').addEventListener('click', () => {
-        expandSection('text-list', 'text-arrow');
-    });
-    document.getElementById('add-overlay-btn').addEventListener('click', () => {
-        expandSection('overlays-list', 'overlay-arrow');
-    });
+    const bgBtn = document.getElementById('add-bg-btn');
+    if (bgBtn) bgBtn.addEventListener('click', () => expandSection('bg-list', 'bg-arrow'));
+
+    const textBtn = document.getElementById('add-text-btn');
+    if (textBtn) textBtn.addEventListener('click', () => expandSection('text-list', 'text-arrow'));
+
+    const overlayBtn = document.getElementById('add-overlay-btn');
+    if (overlayBtn) overlayBtn.addEventListener('click', () => expandSection('overlays-list', 'overlay-arrow'));
 }
 
-// Initialize Collapsibles
+// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Setting up collapsibles...");
     setupCollapsibles();
 });
 
 // Background Add Button
-document.getElementById('add-bg-btn').addEventListener('click', () => {
-    addBackground();
-});
+const bgBtn = document.getElementById('add-bg-btn');
+if (bgBtn) {
+    bgBtn.addEventListener('click', () => {
+        console.log("Add BG Clicked");
+        addBackground();
+    });
+}
 
 // Text Listeners
-document.getElementById('add-text-btn').addEventListener('click', () => {
-    addText();
-});
-// Legacy text listeners removed as text layer is now dynamic list
-
+const textBtn = document.getElementById('add-text-btn');
+if (textBtn) {
+    textBtn.addEventListener('click', () => {
+        console.log("Add Text Clicked");
+        addText();
+    });
+}
 
 // Add Overlay Button
-document.getElementById('add-overlay-btn').addEventListener('click', () => {
-    addOverlay();
-});
+const overlayBtn = document.getElementById('add-overlay-btn');
+if (overlayBtn) {
+    overlayBtn.addEventListener('click', () => {
+        console.log("Add Overlay Clicked");
+        addOverlay();
+    });
+}
 
 
 // Download Logic
-document.getElementById('download-btn').addEventListener('click', () => {
-    const hasAnyBg = state.backgrounds.some(b => b.loaded);
-    if (!hasAnyBg) {
-        alert("Please upload a background image first.");
-        return;
-    }
-
-    drawCanvas(canvas);
-
-    canvas.toBlob((originalBlob) => {
-        if (!originalBlob) {
-            alert("Failed to export.");
+const downloadBtn = document.getElementById('download-btn');
+if (downloadBtn) {
+    downloadBtn.addEventListener('click', () => {
+        const hasAnyBg = state.backgrounds.some(b => b.loaded);
+        if (!hasAnyBg) {
+            alert("Please upload a background image first.");
             return;
         }
 
-        const blob = new Blob([originalBlob], { type: 'application/octet-stream' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
+        drawCanvas(canvas);
 
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        link.download = `composition-${timestamp}.png`;
-        link.href = url;
+        canvas.toBlob((originalBlob) => {
+            if (!originalBlob) {
+                alert("Failed to export.");
+                return;
+            }
 
-        document.body.appendChild(link);
-        link.click();
+            const blob = new Blob([originalBlob], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
 
-        console.log("Download triggered.");
-    }, 'image/png');
-});
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            link.download = `composition-${timestamp}.png`;
+            link.href = url;
+
+            document.body.appendChild(link);
+            link.click();
+        }, 'image/png');
+    });
+}
 
 // Run Initial Render
 renderApp();
+renderOverlayControls();
+renderBackgroundControls();
+renderTextControls();
