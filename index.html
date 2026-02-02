@@ -26,14 +26,14 @@
                 <section class="control-group">
                     <div class="group-header clickable" id="header-bg">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span id="bg-arrow" class="arrow">▼</span>
+                            <span id="bg-arrow" class="arrow">▶</span>
                             <h2>1. Background Layers</h2>
                         </div>
                         <div style="display:flex; align-items:center; gap:8px;" onclick="event.stopPropagation()">
                             <button id="add-bg-btn" class="icon-btn" title="Add Background">+</button>
                         </div>
                     </div>
-                    <div id="bg-list" class="overlays-stack">
+                    <div id="bg-list" class="overlays-stack hidden" style="display:none;">
                         <!-- Dynamic background controls will be injected here -->
                     </div>
                 </section>
@@ -42,14 +42,14 @@
                 <section class="control-group">
                     <div class="group-header clickable" id="header-text">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span id="text-arrow" class="arrow">▼</span>
+                            <span id="text-arrow" class="arrow">▶</span>
                             <h2>2. Text Layers</h2>
                         </div>
                         <div style="display:flex; align-items:center; gap:8px;" onclick="event.stopPropagation()">
                             <button id="add-text-btn" class="icon-btn" title="Add Text">+</button>
                         </div>
                     </div>
-                    <div id="text-list" class="overlays-stack">
+                    <div id="text-list" class="overlays-stack hidden" style="display:none;">
                         <!-- Dynamic text controls will be injected here -->
                     </div>
                 </section>
@@ -58,14 +58,14 @@
                 <section class="control-group">
                     <div class="group-header clickable" id="header-overlays">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span id="overlay-arrow" class="arrow">▼</span>
+                            <span id="overlay-arrow" class="arrow">▶</span>
                             <h2>3. Overlay Images</h2>
                         </div>
                         <div style="display:flex; align-items:center; gap:8px;" onclick="event.stopPropagation()">
                             <button id="add-overlay-btn" class="icon-btn" title="Add Overlay">+</button>
                         </div>
                     </div>
-                    <div id="overlays-list" class="overlays-stack">
+                    <div id="overlays-list" class="overlays-stack hidden" style="display:none;">
                         <!-- Dynamic overlay controls will be injected here -->
                     </div>
                 </section>
