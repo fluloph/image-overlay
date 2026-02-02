@@ -415,9 +415,9 @@ function handleFileUpload(input, id, type) {
 
 // Render Overlay Controls
 function renderOverlayControls() {
-    const check = checkIDsMatch(renderedOverlayIDs, state.overlays);
-    if (check.match) return; // Skip DOM update if IDs match
-    renderedOverlayIDs = check.newIDs;
+    // Optimization removed: checkIDsMatch only checked list length/order, 
+    // ignoring property updates (like loaded state).
+    renderedOverlayIDs = getIDs(state.overlays);
 
     overlaysList.innerHTML = '';
     state.overlays.forEach((overlay, index) => {
@@ -426,9 +426,7 @@ function renderOverlayControls() {
 }
 
 function renderBackgroundControls() {
-    const check = checkIDsMatch(renderedBackgroundIDs, state.backgrounds);
-    if (check.match) return;
-    renderedBackgroundIDs = check.newIDs;
+    renderedBackgroundIDs = getIDs(state.backgrounds);
 
     bgList.innerHTML = '';
     state.backgrounds.forEach((bg, index) => {
@@ -437,9 +435,7 @@ function renderBackgroundControls() {
 }
 
 function renderTextControls() {
-    const check = checkIDsMatch(renderedTextIDs, state.texts);
-    if (check.match) return;
-    renderedTextIDs = check.newIDs;
+    renderedTextIDs = getIDs(state.texts);
 
     textList.innerHTML = '';
     state.texts.forEach((text, index) => {
