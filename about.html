@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - IO Overlay Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body.about-page {
+            display: block;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            overflow-y: auto;
+            height: auto;
+        }
+
+        .about-content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5em;
+            color: var(--text-primary);
+        }
+
+        .about-content h2 {
+            font-size: 1.8rem;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 10px;
+        }
+
+        .about-content p,
+        .about-content li {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #e2e8f0;
+            margin-bottom: 0.8em;
+        }
+
+        .about-content ul,
+        .about-content ol {
+            margin-left: 20px;
+            margin-bottom: 1.5em;
+        }
+
+        .about-content li {
+            margin-bottom: 0.4em;
+        }
+
+        .about-content strong {
+            color: #f8fafc;
+            font-weight: 600;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body class="about-page">
+    <a href="index.html" class="back-link">← Back to Studio</a>
+
+    <div class="about-content glass-panel" style="padding: 40px;">
+        <h1>IO Overlay Studio</h1>
+        <p>A privacy-focused, browser-based tool for composing images with dynamic overlays, text, and backgrounds.
+            Designed for simplicity and security, it runs entirely on your device without sending any data to a server.
+        </p>
+
+        <h2>Overview</h2>
+        <p>IO Overlay Studio allows you to stack multiple image layers (backgrounds and overlays) and text elements to
+            create custom compositions. It is built as a static web application, meaning once loaded, it functions
+            independently of any backend server.</p>
+
+        <h2>Core Rules & Philosophy</h2>
+        <p>The development of this tool strictly adheres to the following tenets:</p>
+        <ol>
+            <li><strong>Privacy First</strong>: All image processing happens locally in your browser's memory using the
+                HTML5 Canvas API. No images are ever uploaded to a cloud server.</li>
+            <li><strong>Zero Data Transfer</strong>: The application does not send any user data or metadata to external
+                servers. It is completely self-contained.</li>
+            <li><strong>Aspect Ratio Preservation</strong>: All images (backgrounds and overlays) are scaled while
+                strictly maintaining their original aspect ratios to prevent distortion.</li>
+            <li><strong>Static Architecture</strong>: The project is built with pure HTML, CSS, and JavaScript,
+                requiring no complex build steps or backend dependencies.</li>
+        </ol>
+
+        <h2>Features</h2>
+        <ul>
+            <li><strong>Multi-Layer Compositing</strong>: Add unlimited background and overlay image layers.</li>
+            <li><strong>Text Tools</strong>: Add customizable text with controls for font size, color, background
+                opacity, and positioning.</li>
+            <li><strong>Layer Management</strong>: Reorder, delete, and toggle visibility of any layer.</li>
+            <li><strong>Precision Controls</strong>: accurate sliders for Opacity, Scale, and X/Y Positioning.</li>
+            <li><strong>Project Saving</strong>: Save your configuration (layer positions, text, settings) to a JSON
+                file and restore it later.</li>
+            <li><strong>High-Quality Export</strong>: Download your final creation as a high-quality JPEG.</li>
+        </ul>
+
+        <h2>How to Use</h2>
+        <ol>
+            <li><strong>Open the Tool</strong>: Launch <code>index.html</code> in any modern web browser.</li>
+            <li><strong>Add Backgrounds</strong>: Click the <strong>+</strong> button in the "Background Layers"
+                section. Upload an image. Use the controls to adjust position or move it up/down in the stack.</li>
+            <li><strong>Add Text</strong>: Click the <strong>+</strong> button in "Text Layers". Type your content and
+                adjust styling (Color, Size, Background Opacity).</li>
+            <li><strong>Add Overlays</strong>: Click the <strong>+</strong> button in "Overlay Images". Upload
+                transparent PNGs or other images to place on top.</li>
+            <li><strong>Save/Load Project</strong>: Use <strong>Save Settings</strong> to download a JSON file of your
+                layout. Use <strong>Open Settings</strong> to restore a layout (you will need to re-select images for
+                security reasons).</li>
+            <li><strong>Export</strong>: Click <strong>Download Image</strong> to save the final composition to your
+                device.</li>
+        </ol>
+    </div>
+</body>
+
+</html>
