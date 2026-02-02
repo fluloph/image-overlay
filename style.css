@@ -397,7 +397,8 @@ canvas {
     transition: background-color 0.2s;
     border-radius: 4px;
     padding: 4px;
-    margin: -4px; /* Offset padding */
+    margin: -4px;
+    /* Offset padding */
 }
 
 .clickable:hover {
@@ -411,4 +412,55 @@ canvas {
     display: inline-block;
     width: 16px;
     text-align: center;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    body {
+        overflow-y: auto;
+        /* Allow body scrolling */
+        height: auto;
+    }
+
+    .app-container {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-top: 1px solid var(--glass-border);
+        order: 2;
+        /* Controls below canvas */
+        z-index: 5;
+    }
+
+    .scroll-content {
+        overflow-y: visible;
+        /* Disable internal scroll, let body scroll */
+        height: auto;
+    }
+
+    .workspace {
+        order: 1;
+        /* Canvas up top */
+        padding: 20px;
+        min-height: 400px;
+        /* Ensure space for canvas */
+        align-items: flex-start;
+        /* Align closer to top */
+        padding-top: 40px;
+    }
+
+    /* Adjust Canvas sizing for mobile */
+    canvas {
+        max-height: 50vh;
+        max-width: 100%;
+    }
+
+    .canvas-wrapper {
+        width: 100%;
+    }
 }
