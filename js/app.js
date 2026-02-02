@@ -790,12 +790,12 @@ if (downloadBtn) {
             const link = document.createElement('a');
 
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            link.download = `composition-${timestamp}.png`;
+            link.download = `composition-${timestamp}.jpg`;
             link.href = url;
 
             document.body.appendChild(link);
             link.click();
-        }, 'image/png');
+        }, 'image/jpeg', 1.0);
     });
 }
 

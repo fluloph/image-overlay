@@ -7,7 +7,7 @@ A web-based tool for composing images with dynamic overlays.
 - **Dynamic Overlays**: Add multiple overlay images on top of the background.
 - **Text Layer**: Add customizable text with font, color, and background opacity settings.
 - **Privacy First**: All processing happens locally in your browser. No images are uploaded to a server.
-- **Export**: Download your final composition as a PNG.
+- **Export**: Download your final composition as a separate high-quality JPEG.
 
 ## Usage
 1.  Open the application (hosted or local).
