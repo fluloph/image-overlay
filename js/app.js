@@ -14,7 +14,8 @@ const state = {
             opacity: 100,
             scale: 100,
             x: 0,
-            y: 0
+            y: 0,
+            expanded: true
         }
     ],
     // Dynamic Array of Texts (Index 0 = Bottom)
@@ -54,7 +55,8 @@ function addOverlay() {
         loaded: false,
         scale: 50,
         x: 50,
-        y: 50
+        y: 50,
+        expanded: true
     });
     notify();
 }
@@ -83,7 +85,8 @@ function addBackground() {
         opacity: 100,
         scale: 100,
         x: 0,
-        y: 0
+        y: 0,
+        expanded: true
     });
     notify();
 }
@@ -121,6 +124,9 @@ function moveBackgroundDown(id) {
     }
 }
 
+// ... (Text actions are below this block) ...
+
+
 // Text Specific Actions
 function addText() {
     state.texts.push({
@@ -131,7 +137,8 @@ function addText() {
         x: 50,
         y: 50,
         maxWidth: 400,
-        bgOpacity: 0
+        bgOpacity: 0,
+        expanded: true
     });
     notify();
 }
@@ -165,6 +172,20 @@ function moveTextDown(id) {
         const temp = state.texts[idx];
         state.texts[idx] = state.texts[idx - 1];
         state.texts[idx - 1] = temp;
+        notify();
+    }
+}
+
+// Common Toggle Action
+function toggleLayerExpansion(id, type) {
+    let list;
+    if (type === 'background') list = state.backgrounds;
+    if (type === 'overlay') list = state.overlays;
+    if (type === 'text') list = state.texts;
+
+    const item = list.find(i => i.id === id);
+    if (item) {
+        item.expanded = !item.expanded;
         notify();
     }
 }
@@ -358,6 +379,7 @@ window.removeBackground = removeBackground;
 window.updateBackground = updateBackground;
 window.moveBackgroundUp = moveBackgroundUp;
 window.moveBackgroundDown = moveBackgroundDown;
+window.toggleLayerExpansion = toggleLayerExpansion;
 
 window.removeText = removeText;
 window.updateText = updateText;
@@ -473,7 +495,7 @@ function createControlCard(item, index, type) {
         const moveUpFn = isBg ? `moveBackgroundUp(${item.id})` : `moveTextUp(${item.id})`;
 
         reorderHtml = `
-            <div style="display:flex; gap:4px; margin-right:8px;">
+            <div style="display:flex; gap:4px; margin-right:8px;" onclick="event.stopPropagation()">
                 <button onclick="${moveDownFn}" class="icon-btn-small" title="Move Down">↓</button>
                 <button onclick="${moveUpFn}" class="icon-btn-small" title="Move Up">↑</button>
             </div>
@@ -481,15 +503,22 @@ function createControlCard(item, index, type) {
     }
 
     // Header Part
+    const isExpanded = item.expanded !== false; // Default true if undefined
+    const arrowChar = isExpanded ? '▼' : '▶';
+
     let innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div class="clickable" onclick="toggleLayerExpansion(${item.id}, '${type}')" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; cursor:pointer;">
             <div style="display:flex; align-items:center;">
+                <span class="arrow" style="margin-right:8px;">${arrowChar}</span>
                 ${reorderHtml}
                 <h3 style="margin:0; font-size:0.9rem; font-weight:500;">${title}</h3>
             </div>
-            <button onclick="${removeFn}" style="background:none; border:none; cursor:pointer; font-size:1.1rem; opacity:0.6;">✖</button>
+            <button onclick="event.stopPropagation(); ${removeFn}" style="background:none; border:none; cursor:pointer; font-size:1.1rem; opacity:0.6;">✖</button>
         </div>
     `;
+
+    // Content Wrapper start
+    innerHTML += `<div class="${isExpanded ? '' : 'hidden'}" style="${isExpanded ? '' : 'display:none;'}">`;
 
     // Content Part
     if (isText) {
@@ -585,6 +614,8 @@ function createControlCard(item, index, type) {
             </div>
         `;
     }
+
+    innerHTML += `</div>`; // Close content wrapper
 
     el.innerHTML = innerHTML;
     return el;
