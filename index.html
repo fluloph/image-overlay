@@ -70,7 +70,18 @@
                     </div>
                 </section>
 
-                <div class="button-group">
+                <div class="button-group" style="display: flex; gap: 8px;">
+                    <button id="save-btn" class="btn-primary"
+                        style="flex:1; background-color: var(--glass-bg); border: 1px solid var(--glass-border);">
+                        Save Settings
+                    </button>
+                    <button id="open-btn" class="btn-primary"
+                        style="flex:1; background-color: var(--glass-bg); border: 1px solid var(--glass-border);">
+                        Open Settings
+                    </button>
+                    <input type="file" id="settings-input" accept=".json" style="display:none">
+                </div>
+                <div class="button-group" style="margin-top: 8px;">
                     <button id="download-btn" class="btn-primary">
                         Download Image
                     </button>

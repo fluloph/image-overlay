@@ -376,15 +376,21 @@ function handleFileUpload(input, id, type) {
             } else if (type === 'background') {
                 const item = state.backgrounds.find(b => b.id === id);
                 if (item) {
+                    // Check if this is a restore/swap (has filename) or a fresh layer
+                    const isFreshLayer = !item.filename;
+
                     item.image = img;
                     item.width = img.naturalWidth;
                     item.height = img.naturalHeight;
-                    item.loaded = true; // Flag as loaded
+                    item.loaded = true;
                     item.filename = file.name;
 
-                    // Defaults to Center for better UX
-                    item.x = 50;
-                    item.y = 50;
+                    // Only default to Center if it's a fresh layer (initialized at 0,0)
+                    // If it has a filename (loaded from settings), keep the saved x/y.
+                    if (isFreshLayer) {
+                        item.x = 50;
+                        item.y = 50;
+                    }
 
                     notify();
                 }
@@ -502,9 +508,13 @@ function createControlCard(item, index, type) {
         `;
     } else {
         // Image / Overlay Controls
+        const placeholderText = item.filename ? `Waiting for: <strong>${item.filename}</strong>` : '';
+        const inputLabelStr = item.filename ? `Re-upload Image` : `Upload Image`;
+
         innerHTML += `
             ${!item.loaded ? `
                 <div class="file-input-wrapper" style="margin-bottom:10px;">
+                        ${placeholderText ? `<div style="font-size:0.8rem; color: #facc15; margin-bottom:4px; word-break:break-all;">${placeholderText}</div>` : ''}
                         <input type="file" accept="image/*" onchange="${uploadFn}(this, ${item.id})" style="width:100%">
                 </div>
             ` : `
@@ -672,6 +682,88 @@ if (overlayBtn) {
         console.log("Add Overlay Clicked");
         addOverlay();
     });
+}
+
+
+// Save Settings
+function saveSettings() {
+    // Create a deep copy of state to modify for export
+    const exportState = JSON.parse(JSON.stringify(state));
+
+    // Strip image data (too large) and loaded status
+    // We only want to save the configuration (names, positions, sizes, text)
+    exportState.backgrounds.forEach(b => {
+        b.image = null;
+        b.loaded = false;
+        // filename is kept
+    });
+    exportState.overlays.forEach(o => {
+        o.image = null;
+        o.loaded = false;
+        // filename is kept
+    });
+    // Texts can be saved as is
+
+    const data = JSON.stringify(exportState, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `overlay-project.json`;
+    link.href = url;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Load Settings
+function loadSettings(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const loadedState = JSON.parse(e.target.result);
+
+            // Basic validation
+            if (!loadedState.backgrounds || !loadedState.overlays || !loadedState.texts) {
+                alert("Invalid settings file.");
+                return;
+            }
+
+            // Restore state
+            state.backgrounds = loadedState.backgrounds || [];
+            state.overlays = loadedState.overlays || [];
+            state.texts = loadedState.texts || [];
+
+            // Images are naturally null from the save process, so loaded=false remains correct
+            // The renderer will see "filename" but "loaded=false" and show the prompt
+
+            notify();
+            alert("Settings loaded. Please re-upload the images where prompted.");
+        } catch (err) {
+            console.error(err);
+            alert("Error parsing settings file.");
+        }
+    };
+    reader.readAsText(file);
+    // Reset input so same file can be selected again
+    event.target.value = '';
+}
+
+// Event Listeners for Save/Load
+const saveBtn = document.getElementById('save-btn');
+if (saveBtn) {
+    saveBtn.addEventListener('click', saveSettings);
+}
+
+const openBtn = document.getElementById('open-btn');
+const settingsInput = document.getElementById('settings-input');
+if (openBtn && settingsInput) {
+    openBtn.addEventListener('click', () => {
+        settingsInput.click();
+    });
+    settingsInput.addEventListener('change', loadSettings);
 }
 
 
