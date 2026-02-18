@@ -32,8 +32,8 @@ function subscribe(callback) {
     listeners.push(callback);
 }
 
-function notify() {
-    listeners.forEach(cb => cb(state));
+function notify(options = { renderDOM: true }) {
+    listeners.forEach(cb => cb(state, options));
 }
 
 // Overlay Specific Actions
@@ -60,7 +60,7 @@ function updateOverlay(id, prop, value) {
     const overlay = state.overlays.find(o => o.id === id);
     if (overlay) {
         overlay[prop] = value;
-        notify();
+        notify({ renderDOM: false });
     }
 }
 
@@ -91,7 +91,7 @@ function updateBackground(id, prop, value) {
     const bg = state.backgrounds.find(b => b.id === id);
     if (bg) {
         bg[prop] = value;
-        notify();
+        notify({ renderDOM: false });
     }
 }
 
@@ -140,7 +140,7 @@ function updateText(id, prop, value) {
     const text = state.texts.find(t => t.id === id);
     if (text) {
         text[prop] = value;
-        notify();
+        notify({ renderDOM: false });
     }
 }
 
@@ -584,11 +584,14 @@ function renderTextControls() {
 
 
 // Subscriptions
-subscribe(() => {
+subscribe((currentState, options = { renderDOM: true }) => {
     renderApp();
-    renderOverlayControls();
-    renderBackgroundControls();
-    renderTextControls();
+
+    if (options.renderDOM) {
+        renderOverlayControls();
+        renderBackgroundControls();
+        renderTextControls();
+    }
 });
 
 
